@@ -1,0 +1,222 @@
+parameters:
+  - name: runTerraformApply
+    type: boolean
+    default: false
+    displayName: "Run Terraform Apply?"
+    values:
+      - false
+      - true
+  - name: runTerraformDestroy
+    type: boolean
+    default: false
+    displayName: "Run Terraform Destroy?"
+    values:
+      - false
+      - true
+
+
+trigger:  none
+pool:  Infra-Nova-Pool
+
+stages:
+ - stage: TerraformScanning
+   displayName: Scanning 
+   jobs:
+    - job: TfsecJob
+      displayName: Tfsec Scanning
+      steps:
+      - task: tfsec@1
+        displayName: tfsec
+        inputs:
+          version: 'v1.26.0'
+          dir: '$(System.DefaultWorkingDirectory)/environment/dev'
+    - job: tflintjob
+      displayName: Tflint Scanning
+      dependsOn:  tfsecJob
+      steps:
+      - task: PowerShell@2
+        displayName: tflint install
+        inputs:
+          targetType: 'inline'
+          script: |
+            choco install tflint -y
+                          tflint --version
+      - task: PowerShell@2
+        displayName: tflint scanning
+        inputs:
+          targetType: 'inline'
+          script: |
+            tflint --init
+            tflint --recursive
+          workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+
+    - job: checkovjob
+      displayName: checkov Scanning
+      dependsOn:  tflintjob
+      steps:
+      - task: PowerShell@2
+        displayName: checkov scanning 
+        continueOnError: true
+        inputs:
+          targetType: 'inline'
+          script: 'checkov -d . --framework terraform'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+
+ - stage: TerraformInstaller
+   displayName: Terraform Installer
+   jobs:
+   - job: TerraformInstaller
+     displayName: Terraform Installer
+     steps:
+     - task: TerraformInstaller@1
+       inputs:
+         terraformVersion: 'latest'       
+
+ - stage: Build
+   displayName: Terraform fmt,validate,init,plan
+   jobs:
+   - job: Terraformfmt
+     displayName: Terraform fmt
+     steps:
+     - task: TerraformTask@5
+       inputs:
+         provider: 'azurerm'
+         command: 'custom'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         outputTo: 'console'
+         customCommand: 'fmt'
+         environmentServiceNameAzureRM: 'harkishore-svc-Web App Host Project-InfraNova'
+   - job: TerraformInit
+     displayName: Terraform Init
+     dependsOn: Terraformfmt
+     steps:
+     - task: TerraformTask@5
+       displayName: Terraform Init
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         backendServiceArm: 'harkishore-svc-Web App Host Project-InfraNova'
+         backendAzureRmResourceGroupName: 'dev-aks-rg'
+         backendAzureRmStorageAccountName: 'infrastorage4480143'
+         backendAzureRmContainerName: 'infracontainer'
+         backendAzureRmKey: 'dev-terraform.tfstate'
+   - job:  TerrafromValidate
+     displayName: Terraform Validate
+     dependsOn:  TerraformInit
+     steps:
+     - task: TerraformTask@5
+       displayName: Terraform Init
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         backendServiceArm: 'harkishore-svc-Web App Host Project-InfraNova'
+         backendAzureRmResourceGroupName: 'dev-aks-rg'
+         backendAzureRmStorageAccountName: 'infrastorage4480143'
+         backendAzureRmContainerName: 'infracontainer'
+         backendAzureRmKey: 'dev-terraform.tfstate'
+     - task: TerraformTask@5
+       displayName: Terraform Validate
+       inputs:
+         provider: 'azurerm'
+         command: 'validate'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+   - job: TerraformPlan
+     displayName: Terraform Plan
+     dependsOn: TerrafromValidate
+     steps:
+     - task: TerraformTask@5
+       displayName: Terraform Init
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         backendServiceArm: 'harkishore-svc-Web App Host Project-InfraNova'
+         backendAzureRmResourceGroupName: 'dev-aks-rg'
+         backendAzureRmStorageAccountName: 'infrastorage4480143'
+         backendAzureRmContainerName: 'infracontainer'
+         backendAzureRmKey: 'dev-terraform.tfstate'
+     - task: TerraformTask@5
+       displayName: Terraform Plan
+       inputs:
+         provider: 'azurerm'
+         command: 'plan'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         environmentServiceNameAzureRM: 'harkishore-svc-Web App Host Project-InfraNova'
+
+ - stage: ManualValidation
+   displayName: Manual validation
+   pool:  server
+   jobs:
+   - job: ManualValidation
+     displayName: Manual Validation
+     steps:
+     - task: ManualValidation@1
+       displayName: Manual Validation
+       inputs:
+         notifyUsers: 'harkishore.singh@outlook.com'
+         approvers: 'harkishore.singh@outlook.com'
+         instructions: 'Please Approve'
+
+ - stage: Terraformdiployement
+   displayName: Terraform Deployment
+   dependsOn:  ManualValidation
+   condition: and(
+      succeeded(),
+      eq(variables['Build.SourceBranch'], 'refs/heads/main'),
+      eq('${{ parameters.runTerraformApply }}', true)
+    )
+   jobs:
+   - job: TerraformApply
+     displayName: Terraform Apply
+     steps:
+     - task: TerraformTask@5
+       displayName: Terraform Init
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         backendServiceArm: 'harkishore-svc-Web App Host Project-InfraNova'
+         backendAzureRmResourceGroupName: 'dev-aks-rg'
+         backendAzureRmStorageAccountName: 'infrastorage4480143'
+         backendAzureRmContainerName: 'infracontainer'
+         backendAzureRmKey: 'dev-terraform.tfstate'
+     - task: TerraformTask@5
+       displayName: Terraform Apply
+       inputs:
+         provider: 'azurerm'
+         command: 'apply'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         environmentServiceNameAzureRM: 'harkishore-svc-Web App Host Project-InfraNova'
+
+ - stage: TerraformDestroy
+   displayName: Terraform Destroy
+   dependsOn:  Terraformdiployement
+   condition: and(
+      succeeded(),
+      eq(variables['Build.SourceBranch'], 'refs/heads/main'),
+      eq('${{ parameters.runTerraformDestroy }}', true)
+    )
+   jobs:
+   - job: TerraformDestroy
+     displayName: Terraform Destroy
+     steps:
+     - task: TerraformTask@5
+       displayName: Terraform init
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         backendServiceArm: 'harkishore-svc-Web App Host Project-InfraNova'
+         backendAzureRmResourceGroupName: 'dev-aks-rg'
+         backendAzureRmStorageAccountName: 'infrastorage4480143'
+         backendAzureRmContainerName: 'infracontainer'
+         backendAzureRmKey: 'dev-terraform.tfstate'
+     - task: TerraformTask@5
+       displayName: Terraform Destroy
+       inputs:
+         provider: 'azurerm'
+         command: 'destroy'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/environment/dev'
+         environmentServiceNameAzureRM: 'harkishore-svc-Web App Host Project-InfraNova'
