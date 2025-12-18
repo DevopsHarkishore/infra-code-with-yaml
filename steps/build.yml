@@ -1,0 +1,12 @@
+steps:
+     - task: TerraformTask@5
+       displayName: Terraform Init
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         workingDirectory: '$(WorkDir)'
+         backendServiceArm: 'harkishore-svc-Web App Host Project-InfraNova'
+         backendAzureRmResourceGroupName: 'dev-aks-rg'
+         backendAzureRmStorageAccountName: 'infrastorage4480143'
+         backendAzureRmContainerName: 'infracontainer'
+         backendAzureRmKey: '${{ parameters.environment }}-terraform.tfstate'
