@@ -122,6 +122,15 @@ pips = {
       environment = "Dev"
     }
   }
+  "pip3" = {
+    pip_name            = "dev-pip3-003"
+    resource_group_name = "dev-rg1-001"
+    location            = "centralindia"
+    allocation_method   = "Static"
+    tags = {
+      environment = "Dev"
+    }
+  }
 }
 
 nics = {
