@@ -104,24 +104,24 @@ nsgs = {
 }
 
 pips = {
-  "pip1" = {
-    pip_name            = "dev-pip1-001"
-    resource_group_name = "dev-rg1-001"
-    location            = "centralindia"
-    allocation_method   = "Static"
-    tags = {
-      environment = "Dev"
-    }
-  }
-  "pip2" = {
-    pip_name            = "dev-pip2-002"
-    resource_group_name = "dev-rg1-001"
-    location            = "centralindia"
-    allocation_method   = "Static"
-    tags = {
-      environment = "Dev"
-    }
-  }
+#   "pip1" = {
+#     pip_name            = "dev-pip1-001"
+#     resource_group_name = "dev-rg1-001"
+#     location            = "centralindia"
+#     allocation_method   = "Static"
+#     tags = {
+#       environment = "Dev"
+#     }
+#   }
+#   "pip2" = {
+#     pip_name            = "dev-pip2-002"
+#     resource_group_name = "dev-rg1-001"
+#     location            = "centralindia"
+#     allocation_method   = "Static"
+#     tags = {
+#       environment = "Dev"
+#     }
+#   }
   "pip3" = {
     pip_name            = "dev-pip3-003"
     resource_group_name = "dev-rg1-001"
@@ -143,7 +143,7 @@ nics = {
         name                          = "internal"
         private_ip_address_allocation = "Dynamic"
         subnet_key                    = "subnet1"
-        pip_key                       = "pip1"
+        # pip_key                       = "pip1"
       }
     ]
   }
@@ -157,7 +157,7 @@ nics = {
         name                          = "internal"
         private_ip_address_allocation = "Dynamic"
         subnet_key                    = "subnet2"
-        pip_key                       = "pip2"
+        # pip_key                       = "pip2"
       }
     ]
   }
