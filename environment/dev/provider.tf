@@ -7,8 +7,8 @@ terraform {
     }
   }
   backend "azurerm" {
-    resource_group_name  = "dev-aks-rg"
-    storage_account_name = "infrastorage4480143"
+    resource_group_name  = "rg-aks-test"
+    storage_account_name = "storagaks120726"
     container_name       = "infracontainer"
     key                  = "dev1-terraform.tfstate"
 
@@ -16,5 +16,4 @@ terraform {
 }
 provider "azurerm" {
   features {}
-  subscription_id = "635e9286-14d1-435f-b7e1-af1ebf689f4e"
 }
